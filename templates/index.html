@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoadGuard - Анализ дорожных проблем</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a0ca3;
+            --danger: #f72585;
+            --warning: #f8961e;
+            --success: #4cc9f0;
+            --dark: #212529;
+            --light: #f8f9fa;
+            --gray: #6c757d;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: var(--dark);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: #4CAF50;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transform: translateX(150%);
+            transition: transform 0.3s ease-out;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification i {
+            font-size: 1.2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: var(--primary-dark);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--gray);
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .upload-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--primary);
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            margin: 20px 0;
+            background-color: rgba(67, 97, 238, 0.05);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            background-color: rgba(67, 97, 238, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            color: var(--primary-dark);
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .btn {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(67, 97, 238, 0.2);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            padding: 30px;
+            margin-top: 30px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .stats-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .stat-item {
+            flex: 1;
+            min-width: 150px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: var(--primary-dark);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title i {
+            margin-right: 10px;
+        }
+
+        .image-comparison {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .image-container {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .image-container h3 {
+            margin-bottom: 15px;
+            color: var(--dark);
+            font-size: 1.2rem;
+        }
+
+        .image-container img {
+            width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+
+        .image-container img:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .problems-list {
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .problem-item {
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--primary);
+            background-color: var(--light);
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+
+        .problem-item.high {
+            border-left-color: var(--warning);
+        }
+
+        .problem-item.critical {
+            border-left-color: var(--danger);
+        }
+
+        .problem-type {
+            font-weight: 500;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+
+        .problem-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+
+        .map-container {
+            margin-top: 30px;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .address-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        #addressInput {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: border 0.3s;
+        }
+
+        #addressInput:focus {
+            border-color: var(--primary);
+        }
+
+        #map {
+            width: 100%;
+            height: 400px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .map-coordinates {
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(0,0,0,0.1);
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .image-comparison {
+                flex-direction: column;
+            }
+
+            .upload-area {
+                padding: 30px 15px;
+            }
+
+            .notification {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                transform: translateY(-150%);
+            }
+
+            .notification.show {
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="notification" id="notification">
+            <i class="fas fa-check-circle"></i>
+            <span>Отчет успешно отправлен!</span>
+        </div>
+
+        <header>
+            <h1><i class="fas fa-road"></i> RoadGuard</h1>
+            <p class="subtitle">Загрузите фотографию проблемы на дороге для автоматического анализа</p>
+        </header>
+
+        <div class="upload-section">
+            <div class="upload-area" id="uploadArea">
+                <input type="file" id="fileInput" accept="image/*">
+                <label for="fileInput" class="upload-label">
+                    <div class="upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <div class="upload-text">Перетащите фото или нажмите для выбора</div>
+                    <div class="upload-hint">Поддерживаются JPG, PNG (до 10MB)</div>
+                </label>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Идет анализ изображения...</p>
+        </div>
+
+        <div class="results" id="results">
+            <div class="stats-card">
+                <div class="stat-item">
+                    <div class="stat-value" id="problemsCount">0</div>
+                    <div class="stat-label">Проблем найдено</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="criticalCount">0</div>
+                    <div class="stat-label">Высокий приоритет</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="highCount">0</div>
+                    <div class="stat-label">Средний приоритет</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="accuracy">0%</div>
+                    <div class="stat-label">Точность анализа</div>
+                </div>
+            </div>
+
+            <h2 class="section-title">
+                <i class="fas fa-images"></i> Результаты анализа
+            </h2>
+            <div class="image-comparison">
+                <div class="image-container">
+                    <h3>Оригинальное изображение</h3>
+                    <img id="originalImage" src="" alt="Исходное фото">
+                </div>
+                <div class="image-container">
+                    <h3>Обнаруженные проблемы</h3>
+                    <img id="resultImage" src="" alt="Результат анализа">
+                </div>
+            </div>
+
+            <div class="map-container">
+                <h2 class="section-title">
+                    <i class="fas fa-map-marked-alt"></i> Указать местоположение
+                </h2>
+                <div class="address-input">
+                    <input type="text" id="addressInput" placeholder="Введите адрес в Москве (например: Тверская ул, 13)">
+                    <button id="searchAddressBtn" class="btn">
+                        <i class="fas fa-search"></i> Найти
+                    </button>
+                </div>
+                <div id="map"></div>
+                <div class="map-coordinates">
+                    <span id="coordinates">Адрес не указан</span>
+                    <input type="hidden" id="actualAddress">
+                </div>
+            </div>
+
+            <h2 class="section-title">
+                <i class="fas fa-exclamation-triangle"></i> Детализация проблем
+            </h2>
+            <div class="problems-list" id="problemsList">
+                <div id="problemsContainer"></div>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="btn" id="reportBtn">
+                    <i class="fas fa-paper-plane"></i> Отправить отчет
+                </button>
+                <button class="btn btn-outline" id="newUploadBtn" style="margin-left: 15px;">
+                    <i class="fas fa-redo"></i> Новый анализ
+                </button>
+            </div>
+        </div>
+
+        <footer>
+            <p>© 2025 RoadGuard | Система мониторинга проблем на дорогах</p>
+        </footer>
+    </div>
+
+    <script src="https://api-maps.yandex.ru/2.1/?apikey=e8344f47-e0cd-40a5-9d74-682c737719df&lang=ru_RU"></script>
+
+    <script>
+        let map;
+        let placemark;
+
+        function initMap() {
+            ymaps.ready(function() {
+                map = new ymaps.Map("map", {
+                    center: [55.751574, 37.573856],
+                    zoom: 12,
+                    controls: ['zoomControl']
+                });
+
+                placemark = new ymaps.Placemark([55.751574, 37.573856], {}, {
+                    draggable: true,
+                    iconLayout: 'default#image',
+                    iconImageHref: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+                    iconImageSize: [32, 32],
+                    iconImageOffset: [-16, -32]
+                });
+
+                map.geoObjects.add(placemark);
+
+                placemark.events.add('dragend', function() {
+                    updateAddress(placemark.geometry.getCoordinates());
+                });
+
+                document.getElementById('searchAddressBtn').addEventListener('click', searchAddress);
+                document.getElementById('addressInput').addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') searchAddress();
+                });
+            });
+        }
+
+        function searchAddress() {
+            const address = document.getElementById('addressInput').value.trim();
+
+            if (!address) {
+                alert('Пожалуйста, введите адрес в Москве');
+                return;
+            }
+
+            ymaps.geocode(address, {
+                results: 1,
+                boundedBy: [[55.55, 37.35], [55.95, 37.85]]
+            }).then(function(res) {
+                const firstGeoObject = res.geoObjects.get(0);
+
+                if (!firstGeoObject) {
+                    throw new Error('Адрес не найден');
+                }
+
+                const coords = firstGeoObject.geometry.getCoordinates();
+                const address = firstGeoObject.getAddressLine();
+
+                placemark.geometry.setCoordinates(coords);
+                map.setCenter(coords, 15);
+
+                document.getElementById('coordinates').textContent = `Адрес: ${address}`;
+                document.getElementById('actualAddress').value = address;
+            }).catch(function(error) {
+                alert('Адрес не найден. Уточните запрос (пример: "Тверская ул, 13")');
+                console.error('Ошибка:', error);
+            });
+        }
+
+        function updateAddress(coords) {
+            ymaps.geocode(coords).then(function(res) {
+                const firstGeoObject = res.geoObjects.get(0);
+                if (firstGeoObject) {
+                    const address = firstGeoObject.getAddressLine();
+                    document.getElementById('coordinates').textContent = `Адрес: ${address}`;
+                    document.getElementById('actualAddress').value = address;
+                }
+            });
+        }
+
+        function showNotification() {
+            const notification = document.getElementById('notification');
+            notification.classList.add('show');
+
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initMap();
+
+            const fileInput = document.getElementById('fileInput');
+            const uploadArea = document.getElementById('uploadArea');
+            const resultsSection = document.getElementById('results');
+            const loadingSection = document.getElementById('loading');
+            const originalImage = document.getElementById('originalImage');
+            const resultImage = document.getElementById('resultImage');
+            const problemsContainer = document.getElementById('problemsContainer');
+            const reportBtn = document.getElementById('reportBtn');
+            const newUploadBtn = document.getElementById('newUploadBtn');
+
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.style.backgroundColor = 'rgba(67, 97, 238, 0.1)';
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.style.backgroundColor = 'rgba(67, 97, 238, 0.05)';
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.style.backgroundColor = 'rgba(67, 97, 238, 0.05)';
+
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    handleFileUpload();
+                }
+            });
+
+            fileInput.addEventListener('change', handleFileUpload);
+
+            reportBtn.addEventListener('click', function() {
+                showNotification();
+
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-check"></i> Отправлено';
+                this.style.backgroundColor = '#4CAF50';
+
+                setTimeout(() => {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить заявление';
+                    this.style.backgroundColor = '';
+                }, 3000);
+            });
+
+            newUploadBtn.addEventListener('click', resetUpload);
+
+            function handleFileUpload() {
+                const file = fileInput.files[0];
+                if (!file) return;
+
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('Файл слишком большой. Максимальный размер - 10MB.');
+                    return;
+                }
+
+                uploadArea.style.display = 'none';
+                loadingSection.style.display = 'block';
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => {
+                            throw new Error(err.error || 'Ошибка сервера');
+                        }).catch(() => {
+                            throw new Error(`Ошибка сервера: ${response.status}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (!data.success) {
+                        throw new Error(data.error || 'Неизвестная ошибка');
+                    }
+
+                    processResponse(data);
+                    if (data.message) {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                    alert('Произошла ошибка: ' + error.message);
+                    resetUpload();
+                });
+            }
+
+            function processResponse(data) {
+                loadingSection.style.display = 'none';
+                resultsSection.style.display = 'block';
+
+                if (data.success) {
+                    document.getElementById('originalImage').src = data.original_image;
+                    document.getElementById('resultImage').src = data.result_image;
+                    displayProblems(data.problems);
+                    updateStats(data.problems);
+                } else {
+                    alert(data.error || 'Произошла ошибка при обработке изображения');
+                    resetUpload();
+                }
+            }
+
+            function displayProblems(problems) {
+                problemsContainer.innerHTML = '';
+
+                if (!problems || problems.length === 0) {
+                    problemsContainer.innerHTML = `
+                        <div class="problem-item">
+                            <div class="problem-type">Проблем на дороге не обнаружено</div>
+                            <div class="problem-meta">
+                                <span>На фотографии не обнаружено проблем</span>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                problems.forEach(problem => {
+                    const problemElement = document.createElement('div');
+                    problemElement.className = `problem-item ${problem.severity}`;
+
+                    problemElement.innerHTML = `
+                        <div class="problem-type">${problem.type}</div>
+                        <div class="problem-meta">
+                            <span>Приоритет: ${getSeverityText(problem.severity)}</span>
+                            <span>Точность: ${problem.confidence}%</span>
+                        </div>
+                    `;
+
+                    problemsContainer.appendChild(problemElement);
+                });
+            }
+
+            function updateStats(problems) {
+                const problemsTotal = problems.length;
+                const criticalTotal = problems.filter(p => p.severity === 'critical').length;
+                const highTotal = problems.filter(p => p.severity === 'high').length;
+                const avgAccuracy = problemsTotal > 0 ?
+                    problems.reduce((sum, p) => sum + p.confidence, 0) / problemsTotal : 0;
+
+                document.getElementById('problemsCount').textContent = problemsTotal;
+                document.getElementById('criticalCount').textContent = criticalTotal;
+                document.getElementById('highCount').textContent = highTotal;
+                document.getElementById('accuracy').textContent = `${Math.round(avgAccuracy)}%`;
+            }
+
+            function resetUpload() {
+                fileInput.value = '';
+                uploadArea.style.display = 'block';
+                resultsSection.style.display = 'none';
+                document.getElementById('addressInput').value = '';
+                document.getElementById('actualAddress').value = '';
+                document.getElementById('coordinates').textContent = 'Адрес не указан';
+            }
+
+            function getSeverityText(severity) {
+                const texts = {
+                    'critical': 'Высокий',
+                    'high': 'Средний',
+                    'medium': 'Низкий'
+                };
+                return texts[severity] || severity;
+            }
+        });
+    </script>
+</body>
+</html>
